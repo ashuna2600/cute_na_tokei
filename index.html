@@ -3,47 +3,61 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Local-Time Visualizer Edition v2.0</title>
+  <title>Local-Time Visualizer Edition v2.1</title>
   <link href="https://fonts.googleapis.com/css2?family=DotGothic16&display=swap" rel="stylesheet">
   <style>
     * { touch-action: manipulation; user-select: none; -webkit-user-select: none; box-sizing: border-box; }
-    body { margin: 0; padding: 0; background: #000; color: #fff; font-family: 'DotGothic16', sans-serif; display: flex; flex-direction: row; justify-content: center; height: 100vh; overflow: hidden; position: relative; }
+    body { margin: 0; padding: 0; background: #000; color: #fff; font-family: 'DotGothic16', sans-serif; display: flex; flex-direction: column; align-items: center; height: 100vh; overflow: hidden; position: relative; }
+    
     #visualizer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; }
     
-    /* 左右のサイドバーと中央のレイアウト */
-    #left-sidebar { position: relative; z-index: 10; width: 150px; height: 100%; display: flex; flex-direction: column; padding: 10px; pointer-events: none; }
-    #ui-layer { position: relative; z-index: 10; width: 100%; max-width: 400px; height: 100%; display: flex; flex-direction: column; align-items: center; padding: 10px; pointer-events: none; }
-    #right-sidebar { position: relative; z-index: 10; width: 150px; height: 100%; display: flex; flex-direction: column; align-items: flex-end; padding: 10px; pointer-events: none; }
-    
-    #left-sidebar > *, #ui-layer > *, #right-sidebar > * { pointer-events: auto; }
+    /* UI全体を縦に積む */
+    #ui-layer { position: relative; z-index: 10; width: 100%; max-width: 400px; height: 100%; display: flex; flex-direction: column; align-items: center; padding: 10px; overflow-y: auto; overflow-x: hidden;}
+    #ui-layer > * { pointer-events: auto; }
 
-    /* 初期起動画面 */
-    #start-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 99999; display: flex; flex-direction: column; justify-content: center; align-items: center; color: #0f0; }
+    #start-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 99999; display: flex; justify-content: center; align-items: center; }
     #enter-btn { font-family: 'DotGothic16', sans-serif; font-size: 2rem; background: transparent; color: #0f0; border: 2px solid #0f0; padding: 15px 40px; cursor: pointer; text-shadow: 0 0 10px #0f0; box-shadow: 0 0 15px rgba(0,255,0,0.3); }
-    #enter-btn:active { background: #0f0; color: #000; }
 
     /* 時計 */
-    #clock-container { background: rgba(0,0,0,0.7); padding: 10px 20px; border: 2px solid #808080; border-right-color: #fff; border-bottom-color: #fff; margin-top: 10px; text-align: center; box-shadow: 0 0 10px rgba(0,255,0,0.2); width: 100%; }
-    #date-display { font-size: 1rem; color: #c0c0c0; margin-bottom: 5px; letter-spacing: 0.1em; }
-    #time-display { font-size: 3rem; color: #0f0; text-shadow: 0 0 10px #0f0; line-height: 1; }
+    #clock-container { background: rgba(0,0,0,0.7); padding: 10px 20px; border: 2px solid #808080; border-right-color: #fff; border-bottom-color: #fff; margin-top: 10px; text-align: center; width: 100%; }
+    #date-display { font-size: 1rem; color: #c0c0c0; letter-spacing: 0.1em; }
+    #time-display { font-size: 3.5rem; color: #0f0; text-shadow: 0 0 10px #0f0; line-height: 1; }
     
-    /* パネル類 */
-    .control-panel { background: #c0c0c0; border: 2px solid; border-color: #fff #000 #000 #fff; color: #000; padding: 10px; width: 100%; margin-top: 15px; }
+    /* メインコントロールパネル */
+    .control-panel { background: #c0c0c0; border: 2px solid; border-color: #fff #000 #000 #fff; color: #000; padding: 10px; width: 100%; margin-top: 10px; }
     .panel-row { margin-bottom: 8px; display: flex; align-items: center; gap: 5px; font-size: 0.9rem;}
-    select, button, input[type="time"] { font-family: 'DotGothic16', sans-serif; font-size: 0.9rem; background: #dfdfdf; border: 2px solid; border-color: #fff #808080 #808080 #fff; cursor: pointer; padding: 2px 4px; }
-    
+    select, button, input[type="time"], input[type="text"] { font-family: 'DotGothic16', sans-serif; font-size: 0.9rem; background: #dfdfdf; border: 2px solid; border-color: #fff #808080 #808080 #fff; padding: 2px 4px; }
+    button:active { border-color: #000 #fff #fff #000; background: #a0a0a0; }
+    input[type="text"] { flex: 1; cursor: text; user-select: auto; -webkit-user-select: auto;}
+
     .mute-tabs { display: flex; width: 100%; margin-top: 5px; }
     .mute-tab { flex: 1; padding: 5px 0; font-size: 0.8rem; text-align: center; background: #dfdfdf; border: 2px solid; border-color: #fff #808080 #808080 #fff; cursor: pointer; }
     .mute-tab.active { background: #fff; border-color: #808080 #fff #fff #808080; font-weight: bold; color: #d00;}
     #alarm-status { font-size: 0.8rem; color: #d00; font-weight: bold; text-align: right; margin-top: 2px; }
-    
+
+    /* YouTube BGMプレイヤーエリア */
+    .yt-panel { background: #000080; color: #fff; padding: 8px; border: 2px inset #808080; margin-top: 5px; font-size: 0.8rem; display: flex; flex-direction: column; gap: 5px; }
+    .yt-row { display: flex; gap: 5px; }
+    #yt-status { color: #0ff; font-size: 0.7rem; text-align: right; }
+
     /* ボイスボタン */
-    .voice-btn-base { background: #c0c0c0; border: 3px solid; border-color: #fff #555 #555 #fff; padding: 10px; margin-top: auto; margin-bottom: auto; box-shadow: 4px 4px 0 rgba(0,0,0,0.5); display: flex; flex-direction: column; align-items: center; }
+    .voice-btn-base { background: #c0c0c0; border: 3px solid; border-color: #fff #555 #555 #fff; padding: 10px; margin-top: 10px; width: 100%; display: flex; flex-direction: column; align-items: center; }
     .voice-btn-label { color: #000; font-size: 0.8rem; margin-bottom: 5px; font-weight: bold; }
-    #random-voice-btn { font-size: 2.5rem; background: #000; border: 3px inset #808080; color: #0f0; text-shadow: 0 0 15px #0f0; cursor: pointer; padding: 10px 20px; }
-    #random-voice-btn:active { background: #111; color: #0ff; border: 3px inset #333; }
-    
-    /* オーバーレイ (ムービー & アラーム) */
+    #random-voice-btn { font-size: 2rem; background: #000; border: 3px inset #808080; color: #0f0; text-shadow: 0 0 10px #0f0; cursor: pointer; padding: 5px 30px; }
+
+    /* 横長天気モジュール (パネルと同じ幅) */
+    .weather-panel { background: #111; color: #0ff; border: 2px solid #808080; border-right-color: #fff; border-bottom-color: #fff; padding: 5px; width: 100%; margin-top: 10px; font-size: 0.8rem; display: flex; justify-content: space-around; text-align: center; }
+    .weather-box { display: flex; flex-direction: column; align-items: center; width: 45%; }
+    .w-label { color: #aaa; font-size: 0.7rem; margin-bottom: 2px;}
+    .w-temp { font-size: 1.2rem; color: #fff; }
+    .w-desc { font-size: 0.8rem; }
+    .weather-divider { width: 1px; background: #555; height: 40px; margin: auto 0; }
+
+    /* 横長広告バナー */
+    .ad-banner-h { background: yellow; color: red; border: 2px dashed red; width: 100%; height: 50px; margin-top: 10px; display: flex; align-items: center; justify-content: center; font-size: 1rem; font-weight: bold; animation: blink 1s infinite; cursor: pointer; flex-shrink: 0;}
+    @keyframes blink { 0%, 100% { background: yellow; color: red; } 50% { background: red; color: yellow; } }
+
+    /* オーバーレイ群 */
     .overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 9999; justify-content: center; align-items: center; flex-direction: column; }
     .window-box { background: #c0c0c0; border: 2px solid; border-color: #fff #000 #000 #fff; width: 95%; max-width: 500px; padding: 2px; color: #000; text-align: center;}
     .window-title-bar { background: #000080; color: #fff; padding: 3px 5px; font-size: 0.9rem; display: flex; justify-content: space-between; font-weight: bold; }
@@ -51,49 +65,35 @@
     video { width: 100%; background: #000; border: 2px inset #808080; margin-top: 2px; }
     .alarm-message { padding: 30px; font-size: 2rem; color: #d00; font-weight: bold; text-shadow: 2px 2px #fff;}
 
-    /* 左：天気モジュール */
-    #weather-widget { background: #000080; color: #0ff; border: 2px solid #c0c0c0; padding: 5px; width: 100%; font-size: 0.8rem; text-align: center; }
-    .widget-title { background: #c0c0c0; color: #000; margin: -5px -5px 5px -5px; padding: 2px; font-weight: bold; border-bottom: 1px solid #fff;}
-    
-    /* 右：広告バナー */
-    .ad-banner { background: yellow; color: red; border: 2px dashed red; width: 120px; height: 300px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; font-weight: bold; text-align: center; line-height: 1.5; animation: blink 1s infinite; cursor: pointer;}
-    @keyframes blink { 0% { background: yellow; color: red; } 50% { background: red; color: yellow; } 100% { background: yellow; color: red; } }
+    /* YouTube隠し用 */
+    #yt-player { position: absolute; width: 1px; height: 1px; top: -9999px; left: -9999px; }
   </style>
 </head>
 <body>
 
-  <!-- BGM用オーディオタグ（ブラウザに直接読み込ませる） -->
-  <audio id="bgm-audio" loop>
-    <!-- デフォルトBGM -->
-    <source id="bgm-source" src="https://actions.google.com/sounds/v1/water/rain_on_roof.ogg" type="audio/ogg">
-  </audio>
+  <!-- YouTube Player用コンテナ -->
+  <div id="yt-player"></div>
 
-  <!-- START画面 -->
+  <!-- BGM用（ローカルファイル・プリセット用） -->
+  <audio id="bgm-audio" loop></audio>
+
   <div id="start-screen">
-    <p>>>> SYSTEM READY <<<</p>
     <button id="enter-btn">ENTER SYSTEM</button>
   </div>
 
   <canvas id="visualizer"></canvas>
 
-  <!-- 左サイドバー（天気） -->
-  <div id="left-sidebar">
-    <div id="weather-widget">
-      <div class="widget-title">LOCAL WEATHER</div>
-      <div id="loc-name">Locating...</div>
-      <div id="loc-temp" style="font-size: 1.5rem; color: #fff; margin: 5px 0;">--°C</div>
-      <div id="loc-desc">--</div>
-    </div>
-  </div>
-
   <!-- 中央UI -->
   <div id="ui-layer">
+    
     <div id="clock-container">
       <div id="date-display">2026/00/00 mon.</div>
       <div id="time-display">00:00:00</div>
     </div>
 
+    <!-- コントロールパネル -->
     <div class="control-panel">
+      <!-- アラーム -->
       <div class="panel-row">
         <span>ALARM:</span>
         <input type="time" id="alarm-time" style="flex:1;">
@@ -102,15 +102,25 @@
       <div id="alarm-status">OFF</div>
       <hr style="border-top:1px solid #808080; border-bottom:1px solid #fff; margin: 8px 0;">
       
+      <!-- BGMソース選択 -->
       <div class="panel-row">
         <span>BGM :</span>
-        <select id="bgm-select" style="flex:1;">
-          <option value="https://actions.google.com/sounds/v1/water/rain_on_roof.ogg">Rain</option>
-          <option value="https://actions.google.com/sounds/v1/ambiences/coffee_shop.ogg">Cafe</option>
+        <select id="bgm-mode" style="flex:1;">
+          <option value="preset">プリセット(雨音)</option>
+          <option value="youtube">YouTubeリンク</option>
         </select>
       </div>
+
+      <!-- YouTubeリンク入力エリア (初期非表示) -->
+      <div class="yt-panel" id="yt-panel" style="display: none;">
+        <div class="yt-row">
+          <input type="text" id="yt-input" placeholder="YouTubeのURLをペースト">
+          <button id="yt-load-btn">LOAD</button>
+        </div>
+        <div id="yt-status">Status: Waiting</div>
+      </div>
       
-      <div class="panel-row">
+      <div class="panel-row" style="margin-top:8px;">
         <span>AREA :</span>
         <select id="area-select" style="flex:1;">
           <option value="chofu">調布</option>
@@ -118,6 +128,7 @@
           <option value="tama">多摩</option>
         </select>
       </div>
+
       <div class="mute-tabs" id="mute-tabs">
         <div class="mute-tab active" data-state="all">全乗せ</div>
         <div class="mute-tab" data-state="bgmonly">自発OFF</div>
@@ -129,104 +140,139 @@
       <div class="voice-btn-label">RANDOM VOICE</div>
       <button id="random-voice-btn">🟢</button>
     </div>
-  </div>
 
-  <!-- 右サイドバー（広告） -->
-  <div id="right-sidebar">
-    <div class="ad-banner" onclick="alert('スポンサー様、お待ちしております！')">
-      YOUR<br>AD<br>HERE<br><br>広告主<br>募集中!
+    <!-- 横長天気パネル -->
+    <div class="weather-panel">
+      <div class="weather-box">
+        <div class="w-label">CURRENT (<span id="loc-name">---</span>)</div>
+        <div class="w-temp" id="curr-temp">--°C</div>
+        <div class="w-desc" id="curr-desc">--</div>
+      </div>
+      <div class="weather-divider"></div>
+      <div class="weather-box">
+        <div class="w-label">+6 HOURS LATER</div>
+        <div class="w-temp" id="future-temp">--°C</div>
+        <div class="w-desc" id="future-desc">--</div>
+      </div>
     </div>
-  </div>
 
-  <!-- ムービーオーバーレイ -->
+    <!-- 横長広告バナー -->
+    <div class="ad-banner-h" onclick="alert('スポンサー様、お待ちしております！')">
+      YOUR AD HERE - 広告主募集中!
+    </div>
+
+  </div> <!-- ui-layer end -->
+
+  <!-- オーバーレイ群 -->
   <div id="movie-overlay" class="overlay">
     <div class="window-box">
-      <div class="window-title-bar">
-        <span id="video-title">Event_Viewer.exe</span>
-        <span class="window-close" onclick="closeMovie()">x</span>
-      </div>
+      <div class="window-title-bar"><span id="video-title">Event_Viewer.exe</span><span class="window-close" onclick="closeMovie()">x</span></div>
       <video id="hourly-movie" playsinline></video>
     </div>
   </div>
 
-  <!-- アラームオーバーレイ -->
   <div id="alarm-overlay" class="overlay">
     <div class="window-box">
-      <div class="window-title-bar">
-        <span>Alarm.exe</span>
-        <span class="window-close" onclick="closeAlarm()">x</span>
-      </div>
+      <div class="window-title-bar"><span>Alarm.exe</span><span class="window-close" onclick="closeAlarm()">x</span></div>
       <div class="alarm-message">WAKE UP!</div>
     </div>
   </div>
+
+  <!-- YouTube IFrame API -->
+  <script src="https://www.youtube.com/iframe_api"></script>
 
   <script>
     const testAssets = {
       voice: "https://actions.google.com/sounds/v1/cartoon/cartoon_boing.ogg",
       alarm: "https://actions.google.com/sounds/v1/alarms/digital_watch_alarm_long.ogg",
-      movie: "https://www.w3schools.com/html/mov_bbb.mp4"
+      movie: "https://www.w3schools.com/html/mov_bbb.mp4",
+      presetBgm: "https://actions.google.com/sounds/v1/water/rain_on_roof.ogg"
     };
 
     let muteState = 'all';
     let currentArea = 'chofu';
     let alarmTime = null;
-    let alarmHasTriggered = false; // アラームの連続発火防止フラグ
-    
+    let alarmHasTriggered = false;
+    let bgmMode = 'preset'; // 'preset' or 'youtube'
+    let ytPlayer = null;
+    let isYtReady = false;
+
     const bgmAudio = document.getElementById('bgm-audio');
-    const startScreen = document.getElementById('start-screen');
-    const alarmOverlay = document.getElementById('alarm-overlay');
-    const movieOverlay = document.getElementById('movie-overlay');
-    const hourlyMovie = document.getElementById('hourly-movie');
-    const bgmSelect = document.getElementById('bgm-select');
-    let alarmSound = new Audio(testAssets.alarm);
-    alarmSound.loop = true; // アラームは止めるまで鳴る
+    bgmAudio.src = testAssets.presetBgm;
+    let alarmSound = new Audio(testAssets.alarm); alarmSound.loop = true;
 
-    // 天気API取得ロジック
-    async function fetchWeather() {
-      try {
-        // まずIPから大まかな緯度経度を取得
-        const geoRes = await fetch('https://ipapi.co/json/');
-        const geoData = await geoRes.json();
-        const lat = geoData.latitude;
-        const lon = geoData.longitude;
-        document.getElementById('loc-name').textContent = geoData.city || "Unknown";
-
-        // 緯度経度から天気を取得
-        const weatherRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`);
-        const weatherData = await weatherRes.json();
-        const temp = weatherData.current_weather.temperature;
-        const code = weatherData.current_weather.weathercode;
-        
-        document.getElementById('loc-temp').textContent = `${temp}°C`;
-        // 簡易的な天気コード変換
-        let desc = "Clear";
-        if(code > 0) desc = "Cloudy";
-        if(code > 50) desc = "Rain";
-        if(code > 70) desc = "Snow";
-        document.getElementById('loc-desc').textContent = desc;
-      } catch (err) {
-        document.getElementById('loc-name').textContent = "Offline";
-      }
+    // --- YouTube API 初期化 ---
+    function onYouTubeIframeAPIReady() {
+      ytPlayer = new YT.Player('yt-player', {
+        height: '1', width: '1', videoId: '',
+        playerVars: { 'autoplay': 0, 'controls': 0, 'loop': 1, 'playsinline': 1 },
+        events: {
+          'onReady': onPlayerReady,
+          'onStateChange': onPlayerStateChange
+        }
+      });
+    }
+    function onPlayerReady(event) { isYtReady = true; }
+    function onPlayerStateChange(event) {
+      // ループ処理
+      if (event.data === YT.PlayerState.ENDED) ytPlayer.playVideo();
     }
 
+    // YouTube ID抽出ロジック
+    function extractVideoID(url) {
+      const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+      const match = url.match(regExp);
+      return (match && match[2].length === 11) ? match[2] : null;
+    }
+
+    // BGMコントロール
     function updateBGM() {
       if (muteState === 'all' || muteState === 'bgmonly') {
-        const source = document.getElementById('bgm-source');
-        source.src = bgmSelect.value;
-        bgmAudio.load();
-        bgmAudio.play().catch(e => console.log("BGM Play Error"));
+        if (bgmMode === 'preset') {
+          if(isYtReady) ytPlayer.pauseVideo();
+          bgmAudio.play().catch(e => {});
+        } else if (bgmMode === 'youtube') {
+          bgmAudio.pause();
+          if(isYtReady && ytPlayer.getPlayerState() !== YT.PlayerState.PLAYING) ytPlayer.playVideo();
+        }
       } else {
         bgmAudio.pause();
+        if(isYtReady) ytPlayer.pauseVideo();
       }
     }
 
+    // --- イベントリスナー群 ---
     document.getElementById('enter-btn').addEventListener('click', () => {
-      startScreen.style.display = 'none';
+      document.getElementById('start-screen').style.display = 'none';
       updateBGM();
-      fetchWeather(); // 起動時に天気取得
+      fetchWeather();
     });
 
-    bgmSelect.addEventListener('change', updateBGM);
+    document.getElementById('bgm-mode').addEventListener('change', (e) => {
+      bgmMode = e.target.value;
+      if (bgmMode === 'youtube') {
+        document.getElementById('yt-panel').style.display = 'flex';
+      } else {
+        document.getElementById('yt-panel').style.display = 'none';
+      }
+      updateBGM();
+    });
+
+    document.getElementById('yt-load-btn').addEventListener('click', () => {
+      if (!isYtReady) return;
+      const url = document.getElementById('yt-input').value;
+      const vidId = extractVideoID(url);
+      const statusEl = document.getElementById('yt-status');
+      if (vidId) {
+        statusEl.textContent = `Status: Loaded (${vidId})`;
+        statusEl.style.color = '#0f0';
+        ytPlayer.loadVideoById(vidId);
+        updateBGM();
+      } else {
+        statusEl.textContent = "Status: Invalid URL";
+        statusEl.style.color = '#f00';
+      }
+    });
 
     document.querySelectorAll('.mute-tab').forEach(tab => {
       tab.addEventListener('click', (e) => {
@@ -237,13 +283,10 @@
       });
     });
 
-    document.getElementById('area-select').addEventListener('change', (e) => { currentArea = e.target.value; });
-
     document.getElementById('alarm-set-btn').addEventListener('click', () => {
       const input = document.getElementById('alarm-time').value;
       if (input) {
-        alarmTime = input;
-        alarmHasTriggered = false; // フラグをリセット
+        alarmTime = input; alarmHasTriggered = false;
         document.getElementById('alarm-status').textContent = `SET [${alarmTime}]`;
         document.getElementById('alarm-status').style.color = '#00f';
       } else {
@@ -258,55 +301,70 @@
       new Audio(testAssets.voice).play().catch(e => {});
     });
 
+    // --- 天気・時計 ---
+    function getWeatherCodeDesc(code) {
+      if(code === 0) return "晴れ";
+      if(code > 0 && code <= 3) return "曇り";
+      if(code >= 51 && code <= 67) return "雨";
+      if(code >= 71 && code <= 77) return "雪";
+      return "不明";
+    }
+
+    async function fetchWeather() {
+      try {
+        const geoRes = await fetch('https://ipapi.co/json/');
+        const geoData = await geoRes.json();
+        const lat = geoData.latitude; const lon = geoData.longitude;
+        document.getElementById('loc-name').textContent = geoData.city || "Unknown";
+
+        // hourlyデータを取得して、現在と6時間後を抽出
+        const weatherRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&hourly=temperature_2m,weathercode`);
+        const data = await weatherRes.json();
+        
+        // Current
+        document.getElementById('curr-temp').textContent = `${data.current_weather.temperature}°C`;
+        document.getElementById('curr-desc').textContent = getWeatherCodeDesc(data.current_weather.weathercode);
+        
+        // 6 hours later (現在の時間indexを探す簡易処理)
+        const nowStr = data.current_weather.time; // "2026-11-12T17:00"
+        const index = data.hourly.time.findIndex(t => t === nowStr);
+        if(index !== -1 && data.hourly.time[index + 6]) {
+          document.getElementById('future-temp').textContent = `${data.hourly.temperature_2m[index + 6]}°C`;
+          document.getElementById('future-desc').textContent = getWeatherCodeDesc(data.hourly.weathercode[index + 6]);
+        }
+      } catch (err) {
+        document.getElementById('loc-name').textContent = "Offline";
+      }
+    }
+
     const dayNames = ['sun.', 'mon.', 'tue.', 'wed.', 'thu.', 'fri.', 'sat.'];
     setInterval(() => {
       const now = new Date();
-      const h = String(now.getHours()).padStart(2, '0');
-      const m = String(now.getMinutes()).padStart(2, '0');
-      const s = String(now.getSeconds()).padStart(2, '0');
-      
+      const h = String(now.getHours()).padStart(2, '0'); const m = String(now.getMinutes()).padStart(2, '0'); const s = String(now.getSeconds()).padStart(2, '0');
       document.getElementById('date-display').textContent = `${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, '0')}/${String(now.getDate()).padStart(2, '0')} ${dayNames[now.getDay()]}`;
       document.getElementById('time-display').textContent = `${h}:${m}:${s}`;
 
-      // アラーム処理 (00秒になった瞬間、かつまだ鳴っていない場合)
       if (alarmTime && `${h}:${m}` === alarmTime && s === '00' && !alarmHasTriggered) {
-        alarmHasTriggered = true; // この1分間は二度と発火しないようにする
-        triggerAlarm();
+        alarmHasTriggered = true; triggerAlarm();
       }
 
-      // 毎時イベント
       if (m === '00' && s === '00') {
         if (muteState !== 'mute') {
           if (muteState === 'all') new Audio(testAssets.voice).play();
-          hourlyMovie.src = testAssets.movie;
-          movieOverlay.style.display = 'flex';
-          hourlyMovie.play();
+          const hv = document.getElementById('hourly-movie');
+          hv.src = testAssets.movie;
+          document.getElementById('movie-overlay').style.display = 'flex';
+          hv.play();
         }
       }
     }, 1000);
 
-    function triggerAlarm() {
-      if (muteState !== 'mute') {
-        alarmSound.play();
-      }
-      alarmOverlay.style.display = 'flex';
-    }
+    function triggerAlarm() { if (muteState !== 'mute') alarmSound.play(); document.getElementById('alarm-overlay').style.display = 'flex'; }
+    function closeAlarm() { document.getElementById('alarm-overlay').style.display = 'none'; alarmSound.pause(); alarmSound.currentTime = 0; }
+    function closeMovie() { document.getElementById('movie-overlay').style.display = 'none'; document.getElementById('hourly-movie').pause(); }
 
-    function closeAlarm() {
-      alarmOverlay.style.display = 'none';
-      alarmSound.pause();
-      alarmSound.currentTime = 0;
-    }
-
-    function closeMovie() {
-      movieOverlay.style.display = 'none';
-      hourlyMovie.pause();
-      hourlyMovie.currentTime = 0;
-    }
-
-    // Canvasアニメーション (変更なし)
-    const canvas = document.getElementById('visualizer');
-    const ctx = canvas.getContext('2d');
+    // --- ビジュアライザー (Canvas) ---
+    const canvas = document.getElementById('visualizer'); const ctx = canvas.getContext('2d');
     let width, height; let particles = []; let mouse = { x: -1000, y: -1000 }; let hue = 0;
     function resize() { width = canvas.width = window.innerWidth; height = canvas.height = window.innerHeight; }
     window.addEventListener('resize', resize); resize();
