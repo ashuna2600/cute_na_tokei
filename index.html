@@ -67,3 +67,202 @@
           <option value="chofu">調布</option>
           <option value="koriyama">郡山</option>
           <option value="tama">多摩センター</option>
+        </select>
+      </div>
+      <div class="mute-tabs" id="mute-tabs">
+        <div class="mute-tab active" data-state="all">全部乗せ</div>
+        <div class="mute-tab" data-state="novoice">ボイスMute</div>
+        <div class="mute-tab" data-state="mute">全Mute</div>
+      </div>
+    </div>
+
+    <div class="voice-btn-base">
+      <div class="voice-btn-label">RANDOM VOICE PLAY</div>
+      <button id="random-voice-btn">🟢</button>
+    </div>
+  </div>
+
+  <!-- 時報ムービー用ウィンドウ -->
+  <div id="movie-overlay">
+    <div class="video-window">
+      <div class="window-title-bar">
+        <span id="video-title">Event_Viewer.exe</span>
+        <span class="window-close" id="close-btn">x</span>
+      </div>
+      <video id="hourly-movie" playsinline></video>
+    </div>
+  </div>
+
+  <script>
+    // テスト用の外部フリー素材URL集
+    const testAssets = {
+      // ランダムボイス用のダミー音（Googleのフリー効果音: コミカルな音）
+      voice: "https://actions.google.com/sounds/v1/cartoon/cartoon_boing.ogg",
+      // アラーム用のダミー音（デジタル時計のピピピッ）
+      alarm: "https://actions.google.com/sounds/v1/alarms/digital_watch_alarm_long.ogg",
+      // 毎時の動画用のダミー動画（W3Schoolsのテスト用ウサギ動画）
+      movie: "https://www.w3schools.com/html/mov_bbb.mp4"
+    };
+
+    let hits = localStorage.getItem('y2k_counter') || 12345;
+    hits = parseInt(hits) + 1;
+    localStorage.setItem('y2k_counter', hits);
+    document.getElementById('hit-counter').textContent = String(hits).padStart(7, '0');
+
+    let muteState = 'all';
+    let currentArea = 'chofu';
+    let alarmTime = null;
+    
+    const dateEl = document.getElementById('date-display');
+    const timeEl = document.getElementById('time-display');
+    const tabs = document.querySelectorAll('.mute-tab');
+    const areaSelect = document.getElementById('area-select');
+    const voiceBtn = document.getElementById('random-voice-btn');
+    const alarmInput = document.getElementById('alarm-time');
+    const alarmSetBtn = document.getElementById('alarm-set-btn');
+    const alarmStatus = document.getElementById('alarm-status');
+    const movieOverlay = document.getElementById('movie-overlay');
+    const hourlyMovie = document.getElementById('hourly-movie');
+    const closeBtn = document.getElementById('close-btn');
+
+    tabs.forEach(tab => {
+      tab.addEventListener('click', (e) => {
+        tabs.forEach(t => t.classList.remove('active'));
+        e.target.classList.add('active');
+        muteState = e.target.dataset.state;
+      });
+    });
+
+    areaSelect.addEventListener('change', (e) => { currentArea = e.target.value; });
+
+    alarmSetBtn.addEventListener('click', () => {
+      if (alarmInput.value) {
+        alarmTime = alarmInput.value;
+        alarmStatus.textContent = `ALARM SET [ ${alarmTime} ]`;
+        alarmStatus.style.color = '#00f';
+      } else {
+        alarmTime = null;
+        alarmStatus.textContent = 'ALARM OFF';
+        alarmStatus.style.color = '#d00';
+      }
+    });
+
+    // テストボイス再生
+    function playRandomVoice(type = 'random') {
+      if (muteState === 'novoice' || muteState === 'mute') return;
+      // ダミー音声URLを使ってAudioオブジェクトを生成して再生
+      const audio = new Audio(testAssets.voice);
+      audio.play().catch(e => console.log("Audio Error:", e));
+    }
+
+    voiceBtn.addEventListener('click', () => playRandomVoice('random'));
+
+    const dayNames = ['sun.', 'mon.', 'tue.', 'wed.', 'thu.', 'fri.', 'sat.'];
+    setInterval(() => {
+      const now = new Date();
+      const y = now.getFullYear();
+      const mo = String(now.getMonth() + 1).padStart(2, '0');
+      const d = String(now.getDate()).padStart(2, '0');
+      const dayStr = dayNames[now.getDay()];
+      
+      const h = String(now.getHours()).padStart(2, '0');
+      const m = String(now.getMinutes()).padStart(2, '0');
+      const s = String(now.getSeconds()).padStart(2, '0');
+      
+      dateEl.textContent = `${y}/${mo}/${d} ${dayStr}`;
+      timeEl.textContent = `${h}:${m}:${s}`;
+
+      // アラーム判定
+      if (alarmTime && `${h}:${m}` === alarmTime && s === '00') {
+        if (muteState !== 'mute') {
+          const alarmAudio = new Audio(testAssets.alarm);
+          alarmAudio.play().catch(e => console.log("Alarm Error:", e));
+        }
+      }
+
+      // 毎時00分00秒のイベント
+      if (m === '00' && s === '00') {
+        playHourlyEvent(h);
+      }
+    }, 1000);
+
+    function playHourlyEvent(hour) {
+      if (muteState === 'mute') return;
+      playRandomVoice('hourly');
+      
+      hourlyMovie.src = testAssets.movie;
+      movieOverlay.style.display = 'flex';
+      hourlyMovie.play().catch(e => {
+        console.log('Video autoplay blocked');
+      });
+    }
+
+    // 動画終了時、または閉じるボタンでポップアップを消す
+    function closeMovie() {
+      movieOverlay.style.display = 'none';
+      hourlyMovie.pause();
+      hourlyMovie.currentTime = 0;
+    }
+    hourlyMovie.addEventListener('ended', closeMovie);
+    closeBtn.addEventListener('click', closeMovie);
+
+    // --- 幾何学模様ビジュアライザー ---
+    const canvas = document.getElementById('visualizer');
+    const ctx = canvas.getContext('2d');
+    let width, height;
+    let particles = [];
+    let mouse = { x: -1000, y: -1000 };
+    let hue = 0;
+
+    function resize() {
+      width = canvas.width = window.innerWidth;
+      height = canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    canvas.addEventListener('mousemove', e => { mouse.x = e.clientX; mouse.y = e.clientY; });
+    canvas.addEventListener('touchmove', e => { mouse.x = e.touches[0].clientX; mouse.y = e.touches[0].clientY; });
+    canvas.addEventListener('touchend', () => { mouse.x = -1000; mouse.y = -1000; });
+    canvas.addEventListener('mouseleave', () => { mouse.x = -1000; mouse.y = -1000; });
+
+    class Particle {
+      constructor() {
+        this.x = Math.random() * width; this.y = Math.random() * height;
+        this.vx = (Math.random() - 0.5) * 2; this.vy = (Math.random() - 0.5) * 2;
+      }
+      update() {
+        this.x += this.vx; this.y += this.vy;
+        if (this.x < 0 || this.x > width) this.vx *= -1;
+        if (this.y < 0 || this.y > height) this.vy *= -1;
+
+        let dx = mouse.x - this.x; let dy = mouse.y - this.y;
+        if (Math.sqrt(dx * dx + dy * dy) < 100) { this.x -= dx * 0.05; this.y -= dy * 0.05; }
+      }
+    }
+
+    for (let i = 0; i < 70; i++) particles.push(new Particle());
+
+    function animate() {
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.2)'; 
+      ctx.fillRect(0, 0, width, height);
+      
+      hue += 0.5; if (hue >= 360) hue = 0;
+      ctx.strokeStyle = `hsl(${hue}, 100%, 50%)`;
+      ctx.lineWidth = 1.5;
+
+      for (let i = 0; i < particles.length; i++) {
+        particles[i].update();
+        for (let j = i + 1; j < particles.length; j++) {
+          let dx = particles[i].x - particles[j].x; let dy = particles[i].y - particles[j].y;
+          if (Math.sqrt(dx*dx + dy*dy) < 120) {
+            ctx.beginPath(); ctx.moveTo(particles[i].x, particles[i].y); ctx.lineTo(particles[j].x, particles[j].y); ctx.stroke();
+          }
+        }
+      }
+      requestAnimationFrame(animate);
+    }
+    animate();
+  </script>
+</body>
+</html>
