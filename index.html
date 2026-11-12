@@ -3,326 +3,67 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Local-Time Visualizer Edition v1.1</title>
+  <title>Local-Time Visualizer Edition v1.2 (Test Build)</title>
   <link href="https://fonts.googleapis.com/css2?family=DotGothic16&display=swap" rel="stylesheet">
   <style>
-    * {
-      touch-action: manipulation;
-      user-select: none;
-      -webkit-user-select: none;
-      box-sizing: border-box;
-    }
-    body {
-      margin: 0; padding: 0; background: #000; color: #fff;
-      font-family: 'DotGothic16', sans-serif;
-      display: flex; flex-direction: column; align-items: center;
-      height: 100vh; overflow: hidden; position: relative;
-    }
-
-    /* 背景ビジュアライザー */
+    * { touch-action: manipulation; user-select: none; -webkit-user-select: none; box-sizing: border-box; }
+    body { margin: 0; padding: 0; background: #000; color: #fff; font-family: 'DotGothic16', sans-serif; display: flex; flex-direction: column; align-items: center; height: 100vh; overflow: hidden; position: relative; }
     #visualizer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; }
-
-    /* 前面UIレイヤー */
-    #ui-layer {
-      position: relative; z-index: 10; width: 100%; max-width: 500px;
-      height: 100%; display: flex; flex-direction: column; align-items: center;
-      padding: 10px; pointer-events: none;
-    }
+    #ui-layer { position: relative; z-index: 10; width: 100%; max-width: 500px; height: 100%; display: flex; flex-direction: column; align-items: center; padding: 10px; pointer-events: none; }
     #ui-layer > * { pointer-events: auto; }
-
-    /* クラシック時計エリア */
-    #clock-container {
-      background: rgba(0,0,0,0.7); padding: 10px 20px; border: 2px solid #808080;
-      border-right-color: #fff; border-bottom-color: #fff; margin-top: 10px;
-      text-align: center; box-shadow: 0 0 10px rgba(0,255,0,0.2);
-    }
+    
+    #clock-container { background: rgba(0,0,0,0.7); padding: 10px 20px; border: 2px solid #808080; border-right-color: #fff; border-bottom-color: #fff; margin-top: 10px; text-align: center; box-shadow: 0 0 10px rgba(0,255,0,0.2); }
     #date-display { font-size: 1.2rem; color: #c0c0c0; margin-bottom: 5px; letter-spacing: 0.1em; }
     #time-display { font-size: 3.5rem; color: #0f0; text-shadow: 0 0 10px #0f0; line-height: 1; }
-
-    /* コントロールパネル */
-    .control-panel {
-      background: #c0c0c0; border: 2px solid; border-color: #fff #000 #000 #fff;
-      color: #000; padding: 10px; width: 95%; margin-top: 15px;
-    }
-    .panel-row { margin-bottom: 8px; display: flex; align-items: center; gap: 5px; }
     
-    select, button, input[type="time"] {
-      font-family: 'DotGothic16', sans-serif; font-size: 1rem;
-      background: #dfdfdf; border: 2px solid; border-color: #fff #808080 #808080 #fff;
-      cursor: pointer; padding: 4px;
-    }
+    .control-panel { background: #c0c0c0; border: 2px solid; border-color: #fff #000 #000 #fff; color: #000; padding: 10px; width: 95%; margin-top: 15px; }
+    .panel-row { margin-bottom: 8px; display: flex; align-items: center; gap: 5px; }
+    select, button, input[type="time"] { font-family: 'DotGothic16', sans-serif; font-size: 1rem; background: #dfdfdf; border: 2px solid; border-color: #fff #808080 #808080 #fff; cursor: pointer; padding: 4px; }
     button:active { border-color: #000 #fff #fff #000; background: #a0a0a0; }
-
-    /* ミュート状態タブ */
+    
     .mute-tabs { display: flex; width: 100%; margin-top: 5px; }
     .mute-tab { flex: 1; padding: 5px 0; text-align: center; background: #dfdfdf; border: 2px solid; border-color: #fff #808080 #808080 #fff; cursor: pointer; }
     .mute-tab.active { background: #fff; border-color: #808080 #fff #fff #808080; font-weight: bold; }
-
-    /* アラームステータス表示 */
     #alarm-status { font-size: 0.9rem; color: #d00; font-weight: bold; text-align: right; margin-top: 2px; }
-
-    /* キリ番アクセスカウンター */
-    #counter-container {
-      margin-top: 15px; font-size: 1.2rem; background: #000; color: #0ff;
-      border: 2px inset #808080; padding: 2px 10px; letter-spacing: 2px;
-    }
-
-    /* グレーの土台に乗ったランダムボイスボタン */
-    .voice-btn-base {
-      background: #c0c0c0; border: 3px solid; border-color: #fff #555 #555 #fff;
-      padding: 15px; margin-top: auto; margin-bottom: auto;
-      box-shadow: 4px 4px 0 rgba(0,0,0,0.5);
-      display: flex; flex-direction: column; align-items: center;
-    }
+    
+    #counter-container { margin-top: 15px; font-size: 1.2rem; background: #000; color: #0ff; border: 2px inset #808080; padding: 2px 10px; letter-spacing: 2px; }
+    
+    .voice-btn-base { background: #c0c0c0; border: 3px solid; border-color: #fff #555 #555 #fff; padding: 15px; margin-top: auto; margin-bottom: auto; box-shadow: 4px 4px 0 rgba(0,0,0,0.5); display: flex; flex-direction: column; align-items: center; }
     .voice-btn-label { color: #000; font-size: 0.9rem; margin-bottom: 5px; font-weight: bold; }
-    #random-voice-btn {
-      font-size: 3rem; background: #000; border: 3px inset #808080;
-      color: #0f0; text-shadow: 0 0 15px #0f0; cursor: pointer; padding: 15px 25px;
-    }
+    #random-voice-btn { font-size: 3rem; background: #000; border: 3px inset #808080; color: #0f0; text-shadow: 0 0 15px #0f0; cursor: pointer; padding: 15px 25px; }
     #random-voice-btn:active { background: #111; color: #0ff; border: 3px inset #333; }
-
-    /* ムービーオーバーレイ */
-    #movie-overlay {
-      display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-      background: #000; z-index: 9999; justify-content: center; align-items: center;
-    }
-    video { width: 100%; max-height: 100%; }
+    
+    #movie-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 9999; justify-content: center; align-items: center; flex-direction: column; }
+    .video-window { background: #c0c0c0; border: 2px solid; border-color: #fff #000 #000 #fff; width: 95%; max-width: 500px; padding: 2px; }
+    .window-title-bar { background: #000080; color: #fff; padding: 3px 5px; font-size: 0.9rem; display: flex; justify-content: space-between; font-weight: bold; }
+    .window-close { background: #c0c0c0; color: #000; border: 1px solid #fff; border-right-color: #000; border-bottom-color: #000; padding: 0 6px; cursor: pointer; }
+    .window-close:active { border-color: #000 #fff #fff #000; }
+    video { width: 100%; background: #000; border: 2px inset #808080; margin-top: 2px; }
   </style>
 </head>
 <body>
 
-  <!-- 幾何学模様ビジュアライザー -->
   <canvas id="visualizer"></canvas>
 
   <div id="ui-layer">
-    <!-- 時計と日付 -->
     <div id="clock-container">
       <div id="date-display">2026/00/00 mon.</div>
       <div id="time-display">00:00:00</div>
     </div>
 
-    <!-- キリ番カウンター -->
-    <div id="counter-container">
-      ACCESS: <span id="hit-counter">0000000</span>
-    </div>
+    <div id="counter-container">ACCESS: <span id="hit-counter">0000000</span></div>
 
-    <!-- 設定パネル -->
     <div class="control-panel">
-      <!-- アラーム設定 -->
       <div class="panel-row">
         <span>ALARM:</span>
         <input type="time" id="alarm-time" style="flex:1;">
         <button id="alarm-set-btn">SET</button>
       </div>
       <div id="alarm-status">ALARM OFF</div>
-
       <hr style="border-top:1px solid #808080; border-bottom:1px solid #fff; margin: 8px 0;">
-
-      <!-- エリア切り替え -->
       <div class="panel-row">
         <span>AREA :</span>
         <select id="area-select" style="flex:1;">
           <option value="chofu">調布</option>
           <option value="koriyama">郡山</option>
           <option value="tama">多摩センター</option>
-        </select>
-      </div>
-
-      <!-- ミュートタブ -->
-      <div class="mute-tabs" id="mute-tabs">
-        <div class="mute-tab active" data-state="all">全部乗せ</div>
-        <div class="mute-tab" data-state="novoice">ボイスMute</div>
-        <div class="mute-tab" data-state="mute">全Mute</div>
-      </div>
-    </div>
-
-    <!-- 独立したグレー土台のランダムボイスボタン -->
-    <div class="voice-btn-base">
-      <div class="voice-btn-label">RANDOM VOICE PLAY</div>
-      <button id="random-voice-btn">🟢</button>
-    </div>
-  </div>
-
-  <div id="movie-overlay">
-    <video id="hourly-movie" playsinline></video>
-  </div>
-
-  <script>
-    // --- アクセスカウンター処理 (ローカルストレージ) ---
-    // 昔のサイトっぽく初期値を12345にしておく
-    let hits = localStorage.getItem('y2k_counter') || 12345;
-    hits = parseInt(hits) + 1;
-    localStorage.setItem('y2k_counter', hits);
-    document.getElementById('hit-counter').textContent = String(hits).padStart(7, '0');
-
-    // --- 状態管理 ---
-    let muteState = 'all';
-    let currentArea = 'chofu';
-    let alarmTime = null;
-    
-    // UI要素の取得
-    const dateEl = document.getElementById('date-display');
-    const timeEl = document.getElementById('time-display');
-    const tabs = document.querySelectorAll('.mute-tab');
-    const areaSelect = document.getElementById('area-select');
-    const voiceBtn = document.getElementById('random-voice-btn');
-    const alarmInput = document.getElementById('alarm-time');
-    const alarmSetBtn = document.getElementById('alarm-set-btn');
-    const alarmStatus = document.getElementById('alarm-status');
-    const movieOverlay = document.getElementById('movie-overlay');
-    const hourlyMovie = document.getElementById('hourly-movie');
-
-    // ミュートタブ切替
-    tabs.forEach(tab => {
-      tab.addEventListener('click', (e) => {
-        tabs.forEach(t => t.classList.remove('active'));
-        e.target.classList.add('active');
-        muteState = e.target.dataset.state;
-      });
-    });
-
-    areaSelect.addEventListener('change', (e) => { currentArea = e.target.value; });
-
-    // アラーム設定処理
-    alarmSetBtn.addEventListener('click', () => {
-      if (alarmInput.value) {
-        alarmTime = alarmInput.value;
-        alarmStatus.textContent = `ALARM SET [ ${alarmTime} ]`;
-        alarmStatus.style.color = '#00f'; // 青色でアクティブ感
-      } else {
-        alarmTime = null;
-        alarmStatus.textContent = 'ALARM OFF';
-        alarmStatus.style.color = '#d00';
-      }
-    });
-
-    // ダミー音声再生（後で実際のファイルに紐づける部分）
-    function playRandomVoice(type = 'random') {
-      if (muteState === 'novoice' || muteState === 'mute') return;
-      console.log(`[PLAY] ${type} voice for ${currentArea}`);
-      // ここにボイス再生処理: new Audio(`voice_${currentArea}_random.mp3`).play();
-    }
-
-    voiceBtn.addEventListener('click', () => playRandomVoice('random'));
-
-    // --- 時計と毎時・アラームの判定 ---
-    const dayNames = ['sun.', 'mon.', 'tue.', 'wed.', 'thu.', 'fri.', 'sat.'];
-    setInterval(() => {
-      const now = new Date();
-      const y = now.getFullYear();
-      const mo = String(now.getMonth() + 1).padStart(2, '0');
-      const d = String(now.getDate()).padStart(2, '0');
-      const dayStr = dayNames[now.getDay()];
-      
-      const h = String(now.getHours()).padStart(2, '0');
-      const m = String(now.getMinutes()).padStart(2, '0');
-      const s = String(now.getSeconds()).padStart(2, '0');
-      
-      dateEl.textContent = `${y}/${mo}/${d} ${dayStr}`;
-      timeEl.textContent = `${h}:${m}:${s}`;
-
-      // アラーム判定 (指定時刻の00秒に発動)
-      if (alarmTime && `${h}:${m}` === alarmTime && s === '00') {
-        if (muteState !== 'mute') {
-          console.log("ALARM TRIGGERED!");
-          // ここにアラーム専用ボイス再生: new Audio('alarm_voice.mp3').play();
-        }
-      }
-
-      // 毎時00分00秒のイベント
-      if (m === '00' && s === '00') {
-        playHourlyEvent(h);
-      }
-    }, 1000);
-
-    function playHourlyEvent(hour) {
-      if (muteState === 'mute') return;
-      
-      playRandomVoice('hourly');
-      
-      // ムービー再生
-      hourlyMovie.src = `movie_${currentArea}_${hour}.mp4`;
-      movieOverlay.style.display = 'flex';
-      hourlyMovie.play().catch(e => {
-        console.log('Video autoplay blocked');
-        movieOverlay.style.display = 'none';
-      });
-    }
-
-    hourlyMovie.addEventListener('ended', () => {
-      movieOverlay.style.display = 'none';
-    });
-
-    // --- 幾何学模様ビジュアライザー (Canvas/色変化対応) ---
-    const canvas = document.getElementById('visualizer');
-    const ctx = canvas.getContext('2d');
-    let width, height;
-    let particles = [];
-    let mouse = { x: -1000, y: -1000 };
-    let hue = 0; // 色を変化させるための変数
-
-    function resize() {
-      width = canvas.width = window.innerWidth;
-      height = canvas.height = window.innerHeight;
-    }
-    window.addEventListener('resize', resize);
-    resize();
-
-    canvas.addEventListener('mousemove', e => { mouse.x = e.clientX; mouse.y = e.clientY; });
-    canvas.addEventListener('touchmove', e => { mouse.x = e.touches[0].clientX; mouse.y = e.touches[0].clientY; });
-    canvas.addEventListener('touchend', () => { mouse.x = -1000; mouse.y = -1000; });
-    canvas.addEventListener('mouseleave', () => { mouse.x = -1000; mouse.y = -1000; });
-
-    class Particle {
-      constructor() {
-        this.x = Math.random() * width;
-        this.y = Math.random() * height;
-        this.vx = (Math.random() - 0.5) * 2;
-        this.vy = (Math.random() - 0.5) * 2;
-      }
-      update() {
-        this.x += this.vx; this.y += this.vy;
-        if (this.x < 0 || this.x > width) this.vx *= -1;
-        if (this.y < 0 || this.y > height) this.vy *= -1;
-
-        let dx = mouse.x - this.x;
-        let dy = mouse.y - this.y;
-        if (Math.sqrt(dx * dx + dy * dy) < 100) {
-          this.x -= dx * 0.05;
-          this.y -= dy * 0.05;
-        }
-      }
-    }
-
-    for (let i = 0; i < 70; i++) particles.push(new Particle());
-
-    function animate() {
-      // 軌跡を残す処理
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.2)'; 
-      ctx.fillRect(0, 0, width, height);
-      
-      // hue(色相)を徐々にずらして色を変化させる
-      hue += 0.5;
-      if (hue >= 360) hue = 0;
-      ctx.strokeStyle = `hsl(${hue}, 100%, 50%)`;
-      ctx.lineWidth = 1.5;
-
-      for (let i = 0; i < particles.length; i++) {
-        particles[i].update();
-        for (let j = i + 1; j < particles.length; j++) {
-          let dx = particles[i].x - particles[j].x;
-          let dy = particles[i].y - particles[j].y;
-          if (Math.sqrt(dx*dx + dy*dy) < 120) {
-            ctx.beginPath();
-            ctx.moveTo(particles[i].x, particles[i].y);
-            ctx.lineTo(particles[j].x, particles[j].y);
-            ctx.stroke();
-          }
-        }
-      }
-      requestAnimationFrame(animate);
-    }
-    animate();
-  </script>
-</body>
-</html>
