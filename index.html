@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Local-Time Visualizer Edition</title>
+  <link href="https://fonts.googleapis.com/css2?family=DotGothic16&display=swap" rel="stylesheet">
+  <style>
+    /* スマホ連打時のズーム防止＆テキスト選択防止 */
+    * {
+      touch-action: manipulation;
+      user-select: none;
+      -webkit-user-select: none;
+      box-sizing: border-box;
+    }
+    body {
+      margin: 0; padding: 0; background: #000; color: #fff;
+      font-family: 'DotGothic16', sans-serif;
+      display: flex; flex-direction: column; align-items: center;
+      height: 100vh; overflow: hidden; position: relative;
+    }
+
+    /* 背景ビジュアライザー（Canvas） */
+    #visualizer {
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1;
+    }
+
+    /* 前面UIレイヤー */
+    #ui-layer {
+      position: relative; z-index: 10; width: 100%; max-width: 500px;
+      height: 100%; display: flex; flex-direction: column; align-items: center;
+      padding: 10px; pointer-events: none; /* 下のCanvasにタッチを透過 */
+    }
+    #ui-layer > * { pointer-events: auto; /* UI部品はタッチ有効 */ }
+
+    /* クラシック時計 */
+    #clock {
+      font-size: 3.5rem; color: #0f0; text-shadow: 0 0 10px #0f0;
+      background: rgba(0,0,0,0.6); padding: 10px 20px; border: 2px solid #808080;
+      border-right-color: #fff; border-bottom-color: #fff; margin-top: 10px;
+    }
+
+    /* コントロールパネル (WMP風グレー枠) */
+    .control-panel {
+      background: #c0c0c0; border: 2px solid; border-color: #fff #000 #000 #fff;
+      color: #000; padding: 10px; width: 95%; margin-top: 15px;
+    }
+    
+    .panel-row { margin-bottom: 8px; display: flex; align-items: center; gap: 5px; }
+    
+    select, button {
+      font-family: 'DotGothic16', sans-serif; font-size: 1rem;
+      background: #dfdfdf; border: 2px solid; border-color: #fff #808080 #808080 #fff;
+      cursor: pointer; padding: 4px;
+    }
+    button:active { border-color: #000 #fff #fff #000; background: #a0a0a0; }
+
+    /* ミュート状態タブ */
+    .mute-tabs { display: flex; width: 100%; }
+    .mute-tab { flex: 1; padding: 5px 0; text-align: center; background: #dfdfdf; border: 2px solid; border-color: #fff #808080 #808080 #fff; cursor: pointer; }
+    .mute-tab.active { background: #fff; border-color: #808080 #fff #fff #808080; font-weight: bold; }
+
+    /* 中央の謎ボタン */
+    #random-voice-btn {
+      margin-top: auto; margin-bottom: auto;
+      font-size: 4rem; background: transparent; border: none;
+      color: #0f0; text-shadow: 0 0 15px #0f0;
+      cursor: pointer; outline: none; padding: 20px;
+    }
+    #random-voice-btn:active { transform: scale(0.95); text-shadow: 0 0 30px #0ff; }
+
+    /* 毎時00分のムービーオーバーレイ */
+    #movie-overlay {
+      display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: #000; z-index: 9999; justify-content: center; align-items: center;
+    }
+    video { width: 100%; max-height: 100%; }
+  </style>
+</head>
+<body>
+
+  <!-- 幾何学模様ビジュアライザー -->
+  <canvas id="visualizer"></canvas>
+
+  <div id="ui-layer">
+    <!-- 時計 -->
+    <div id="clock">00:00:00</div>
+
+    <!-- 設定パネル -->
+    <div class="control-panel">
+      <!-- 曲選択 -->
+      <div class="panel-row">
+        <span>BGM:</span>
+        <select id="bgm-select" style="flex:1;">
+          <option value="track1.mp3">Track 1</option>
+          <option value="track2.mp3">Track 2</option>
+          <option value="track3.mp3">Track 3</option>
+        </select>
+      </div>
+      <!-- エリア切り替え -->
+      <div class="panel-row">
+        <span>AREA:</span>
+        <select id="area-select" style="flex:1;">
+          <option value="chofu">調布</option>
+          <option value="koriyama">郡山</option>
+          <option value="tama">多摩センター</option>
+        </select>
+      </div>
+      <!-- ミュートタブ -->
+      <div class="mute-tabs" id="mute-tabs">
+        <div class="mute-tab active" data-state="all">全部乗せ</div>
+        <div class="mute-tab" data-state="novoice">ボイスMute</div>
+        <div class="mute-tab" data-state="mute">全Mute</div>
+      </div>
+    </div>
+
+    <!-- ランダムボイスボタン -->
+    <button id="random-voice-btn">🟢</button>
+  </div>
+
+  <!-- ムービー再生用 -->
+  <div id="movie-overlay">
+    <video id="hourly-movie" playsinline></video>
+  </div>
+
+  <script>
+    // --- 状態管理 ---
+    let muteState = 'all'; // all, novoice, mute
+    let currentArea = 'chofu';
+    
+    // UI要素の取得
+    const clockEl = document.getElementById('clock');
+    const tabs = document.querySelectorAll('.mute-tab');
+    const bgmSelect = document.getElementById('bgm-select');
+    const areaSelect = document.getElementById('area-select');
+    const voiceBtn = document.getElementById('random-voice-btn');
+    const movieOverlay = document.getElementById('movie-overlay');
+    const hourlyMovie = document.getElementById('hourly-movie');
+
+    // --- ミュートタブの切り替え ---
+    tabs.forEach(tab => {
+      tab.addEventListener('click', (e) => {
+        tabs.forEach(t => t.classList.remove('active'));
+        e.target.classList.add('active');
+        muteState = e.target.dataset.state;
+      });
+    });
+
+    // エリア切り替え
+    areaSelect.addEventListener('change', (e) => { currentArea = e.target.value; });
+
+    // --- 音声再生ロジック（ダミー関数） ---
+    // 実際には手元のボイスファイル名配列をランダムに呼び出す
+    function playRandomVoice() {
+      if (muteState === 'novoice' || muteState === 'mute') return;
+      console.log(`[PLAY VOICE] Area: ${currentArea} のボイスを再生`);
+      // 例: const voice = new Audio(`voice_${currentArea}_${Math.floor(Math.random()*3)}.mp3`); voice.play();
+    }
+
+    voiceBtn.addEventListener('click', playRandomVoice);
+
+    // --- 時計と毎時00分の判定 ---
+    setInterval(() => {
+      const now = new Date();
+      const h = String(now.getHours()).padStart(2, '0');
+      const m = String(now.getMinutes()).padStart(2, '0');
+      const s = String(now.getSeconds()).padStart(2, '0');
+      clockEl.textContent = `${h}:${m}:${s}`;
+
+      // 毎時00分00秒の処理
+      if (m === '00' && s === '00') {
+        playHourlyEvent(h);
+      }
+    }, 1000);
+
+    function playHourlyEvent(hour) {
+      if (muteState === 'mute') return; // 全ミュートなら再生しない
+      
+      // BGM・ボイス再生
+      playRandomVoice();
+      if(muteState === 'all') {
+         // const bgm = new Audio(bgmSelect.value); bgm.play();
+      }
+
+      // ムービー再生
+      hourlyMovie.src = `movie_${currentArea}_${hour}.mp4`; // 該当ファイルのパス
+      movieOverlay.style.display = 'flex';
+      hourlyMovie.play().catch(e => {
+        // 自動再生ブロック対策
+        console.log('Video autoplay blocked');
+        movieOverlay.style.display = 'none';
+      });
+    }
+
+    hourlyMovie.addEventListener('ended', () => {
+      movieOverlay.style.display = 'none';
+    });
+
+    // --- 幾何学模様ビジュアライザー (Canvas) ---
+    const canvas = document.getElementById('visualizer');
+    const ctx = canvas.getContext('2d');
+    let width, height;
+    let particles = [];
+    let mouse = { x: -1000, y: -1000 };
+
+    function resize() {
+      width = canvas.width = window.innerWidth;
+      height = canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    // タッチ＆マウスで模様が動く処理
+    canvas.addEventListener('mousemove', e => { mouse.x = e.clientX; mouse.y = e.clientY; });
+    canvas.addEventListener('touchmove', e => { mouse.x = e.touches[0].clientX; mouse.y = e.touches[0].clientY; });
+    canvas.addEventListener('touchend', () => { mouse.x = -1000; mouse.y = -1000; });
+    canvas.addEventListener('mouseleave', () => { mouse.x = -1000; mouse.y = -1000; });
+
+    class Particle {
+      constructor() {
+        this.x = Math.random() * width;
+        this.y = Math.random() * height;
+        this.vx = (Math.random() - 0.5) * 2;
+        this.vy = (Math.random() - 0.5) * 2;
+      }
+      update() {
+        this.x += this.vx; this.y += this.vy;
+        if (this.x < 0 || this.x > width) this.vx *= -1;
+        if (this.y < 0 || this.y > height) this.vy *= -1;
+
+        // マウスへのインタラクション（弾き飛ばす）
+        let dx = mouse.x - this.x;
+        let dy = mouse.y - this.y;
+        let dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < 100) {
+          this.x -= dx * 0.05;
+          this.y -= dy * 0.05;
+        }
+      }
+    }
+
+    for (let i = 0; i < 70; i++) particles.push(new Particle());
+
+    function animate() {
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.2)'; // 軌跡を残す
+      ctx.fillRect(0, 0, width, height);
+      
+      ctx.strokeStyle = '#0f0';
+      ctx.lineWidth = 1;
+
+      for (let i = 0; i < particles.length; i++) {
+        particles[i].update();
+        // 近いパーティクル同士を幾何学的に結ぶ
+        for (let j = i + 1; j < particles.length; j++) {
+          let dx = particles[i].x - particles[j].x;
+          let dy = particles[i].y - particles[j].y;
+          let dist = Math.sqrt(dx*dx + dy*dy);
+          if (dist < 120) {
+            ctx.beginPath();
+            ctx.moveTo(particles[i].x, particles[i].y);
+            ctx.lineTo(particles[j].x, particles[j].y);
+            ctx.stroke();
+          }
+        }
+      }
+      requestAnimationFrame(animate);
+    }
+    animate();
+  </script>
+</body>
+</html>
